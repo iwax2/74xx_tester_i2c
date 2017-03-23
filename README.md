@@ -32,4 +32,5 @@ Arduinoシールド型（ちょっとでかい）で、0.5秒ぐらいでICを1�
 `tester_74xx_i2c.ino`をArduino IDE (1.6.11で確認)で書き込んでください
 
 ![加工した基板の例](/img/kiban.jpg)  
-FusionPCBで製造
+
+FusionPCBで製造（ちょっとTestとSelectのシルク間違えた）
