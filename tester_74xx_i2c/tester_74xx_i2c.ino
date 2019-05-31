@@ -24,7 +24,7 @@ char* ic_type[] = {
   "NR2 (74LS02)", // 2-input NOR
   "EO2 (74LS86)", // 2-input XOR
   "DFF (74LS74)", // D flip-flop
-  "JK (74LS107)" // JK flip-flop
+  "JKF(74LS107)" // JK flip-flop
 };
 
 /*
@@ -74,7 +74,7 @@ void setup() {
   lcd.setCursor(0, 0);
   lcd.print("Tester for 74xx"); // max 16 character
   lcd.setCursor(0, 1);
-  lcd.print("    version 1.5 ");
+  lcd.print("    version 1.6 ");
 
   // set switch direction
   pinMode(SW_IC_SELECT, INPUT_PULLUP);
@@ -200,7 +200,9 @@ void exec_test() {
     response |= apply_to_4input2(0, 1, 0, 1, 0, 1); // negative edge triger Q=1->0
     response |= apply_to_4input2(1, 0, 0, 0, 0, 1); // reset
   } else {
+    Serial.println("Gate Not Found!!");
     response = 0xffff;
+    lcd_print_result("XX", response);
   }
   Serial.println("end!");
   if ( response == 0 ) {
