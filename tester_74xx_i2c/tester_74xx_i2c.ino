@@ -24,7 +24,7 @@ char* ic_type[] = {
   "NR2 (74LS02)", // 2-input NOR
   "EO2 (74LS86)", // 2-input XOR
   "DFF (74LS74)", // D flip-flop
-  "JKF (74LS107)" // JK flip-flop
+  "JK (74LS107)" // JK flip-flop
 };
 
 /*
