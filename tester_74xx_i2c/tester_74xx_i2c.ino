@@ -30,7 +30,6 @@ unsigned int read_I2C_port();
 void change_mode();
 void start_test();
 
-
 // initialize the library with the numbers of the interface pins
 //LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
 LiquidCrystal lcd(4, 5, 6, 7, 8, 9);
@@ -72,12 +71,18 @@ char* ic_type[] = {
   74pin  |  13  12  11  10   9   8                   6   5   4   3   2   1
   ND2_DIR| out out  in out out  in                  in out out  in out out
   ND3_DIR| out  in out out out  in                  in out out out out out
+<<<<<<< HEAD
   ND4_DIR| out out out out out  in                  in out out out out out
+=======
+>>>>>>> e498ea0c3383efc1a8c5e4a8101996708cb80e93
   NR2_DIR|  in out out  in out out                 out out  in out out  in
   IV1_DIR| out  in out  in out  in                  in out  in out  in out
   DFF_DIR| out out out out  in  in                  in  in out out out out
   JKF_DIR| out out out out out out                  in  in out  in  in out
+<<<<<<< HEAD
   BC4_DIR| out out  in  in  in  in                  in  in  in  in out out
+=======
+>>>>>>> e498ea0c3383efc1a8c5e4a8101996708cb80e93
 */
 // bit number        5432109876543210
 #define ND2_IO_DIR 0b0010011111100100 // I/O Direction 0:output 1:input
@@ -285,7 +290,9 @@ void exec_test() {
     response |= apply_to_2input3(1, 0, 1, 1, 1, 1); // 
     response |= apply_to_2input3(1, 1, 0, 0, 0, 0); // reset
   } else {
+    Serial.println("Gate Not Found!!");
     response = 0xffff;
+    lcd_print_result("XX", response);
   }
   Serial.println("end!");
   if ( response == 0 ) {
