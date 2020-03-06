@@ -10,21 +10,45 @@
 #include <Wire.h>
 #include <LiquidCrystal.h>
 
+void exec_test();
+unsigned int apply_to_2input1( byte test_a, byte test_b, byte expect );
+unsigned int apply_to_3input1( byte test_a, byte test_b, byte test_c, byte expect );
+unsigned int apply_to_4input3( byte test_a, byte test_b, byte test_c, byte test_d, byte expect );
+unsigned int apply_to_2input2( byte test_a, byte test_b, byte expect );
+unsigned int apply_to_1input1( byte test_a, byte expect );
+unsigned int apply_to_4input1( byte test_clk, byte test_clr, byte test_pr, byte test_d, byte exp_q, byte exp_qn );
+unsigned int apply_to_4input2( byte test_clk, byte test_clr, byte test_j, byte test_k, byte exp_q, byte exp_qn );
+unsigned int apply_to_2input3( byte test_clk, byte test_clr, byte exp_d, byte exp_c, byte exp_b, byte exp_a );
+unsigned int apply_test( unsigned test, unsigned e, unsigned io_dir );
+void serial_print_bin( char* note, unsigned int data);
+char* int2bin_by_str( char* str, unsigned int data);
+void lcd_print_mode();
+void lcd_print_result( char* result, unsigned int response );
+char* get_ic_name3( int type );
+void write_I2C_port(int address, byte value);
+unsigned int read_I2C_port();
+void change_mode();
+void start_test();
+
+
 // initialize the library with the numbers of the interface pins
 //LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
 LiquidCrystal lcd(4, 5, 6, 7, 8, 9);
 
-#define NO_TYPES 9
+#define NO_TYPES 12
 char* ic_type[] = {
   "IV1 (74LS04)", // 1-input NOT
+  "BUF (74LS07)", // 1-input Buffer
   "AN2 (74LS08)", // 2-input AND
   "OR2 (74LS32)", // 2-input OR
   "ND2 (74LS00)", // 2-input NAND
   "ND3 (74LS10)", // 3-input NAND
+  "ND4 (74LS20)", // 4-input NAND
   "NR2 (74LS02)", // 2-input NOR
   "EO2 (74LS86)", // 2-input XOR
   "DFF (74LS74)", // D flip-flop
-  "JK (74LS107)" // JK flip-flop
+  "JKF(74LS107)", // JK flip-flop
+  "BC4(74LS393)"  // Dual 4-Bit Binary Counter
 };
 
 /*
@@ -48,18 +72,22 @@ char* ic_type[] = {
   74pin  |  13  12  11  10   9   8                   6   5   4   3   2   1
   ND2_DIR| out out  in out out  in                  in out out  in out out
   ND3_DIR| out  in out out out  in                  in out out out out out
+  ND4_DIR| out out out out out  in                  in out out out out out
   NR2_DIR|  in out out  in out out                 out out  in out out  in
   IV1_DIR| out  in out  in out  in                  in out  in out  in out
   DFF_DIR| out out out out  in  in                  in  in out out out out
   JKF_DIR| out out out out out out                  in  in out  in  in out
+  BC4_DIR| out out  in  in  in  in                  in  in  in  in out out
 */
 // bit number        5432109876543210
 #define ND2_IO_DIR 0b0010011111100100 // I/O Direction 0:output 1:input
 #define ND3_IO_DIR 0b0100011111100000 // I/O Direction 0:output 1:input
+#define ND4_IO_DIR 0b0000011111100000 // I/O Direction 0:output 1:input
 #define NR2_IO_DIR 0b1001001111001001 // I/O Direction 0:output 1:input
 #define IV1_IO_DIR 0b0101011111101010 // I/O Direction 0:output 1:input
 #define DFF_IO_DIR 0b0000111111110000 // I/O Direction 0:output 1:input
 #define JKF_IO_DIR 0b0000001111110110 // I/O Direction 0:output 1:input
+#define BC4_IO_DIR 0b0011111111111100 // I/O Direction 0:output 1:input
 
 volatile int mode = -1;
 volatile bool flag_test = false;
@@ -74,7 +102,7 @@ void setup() {
   lcd.setCursor(0, 0);
   lcd.print("Tester for 74xx"); // max 16 character
   lcd.setCursor(0, 1);
-  lcd.print("    version 1.5 ");
+  lcd.print("    version 2.0 ");
 
   // set switch direction
   pinMode(SW_IC_SELECT, INPUT_PULLUP);
@@ -94,8 +122,8 @@ void setup() {
   delay(100);
   flag_test = false;
 
-  write_I2C_port(0x00, 0x00); // I/O Direction A 0:output 1:input (Default : input)
-  write_I2C_port(0x01, 0x00); // I/O Direction B 0:output 1:input プルアップしてるから安全かなと
+//  write_I2C_port(0x00, 0x00); // I/O Direction A 0:output 1:input (Default : input)
+//  write_I2C_port(0x01, 0x00); // I/O Direction B 0:output 1:input プルアップしてるから安全かなと
 }
 
 void loop() {
@@ -129,6 +157,10 @@ void exec_test() {
     Serial.println("NOT");
     response |= apply_to_1input1(0, 1);
     response |= apply_to_1input1(1, 0);
+  } else if ( strcmp(selected_ic, "BUF") == 0 ) {
+    Serial.println("BUF");
+    response |= apply_to_1input1(0, 0);
+    response |= apply_to_1input1(1, 1);
   } else if ( strcmp(selected_ic, "AN2") == 0 ) {
     Serial.println("AND");
     response |= apply_to_2input1(0, 0, 0);
@@ -157,6 +189,24 @@ void exec_test() {
     response |= apply_to_3input1(1, 0, 1, 1);
     response |= apply_to_3input1(1, 1, 0, 1);
     response |= apply_to_3input1(1, 1, 1, 0);
+  } else if ( strcmp(selected_ic, "ND4") == 0 ) {
+    Serial.println("NAND4");
+    response |= apply_to_4input3(0, 0, 0, 0, 1);
+    response |= apply_to_4input3(0, 0, 0, 1, 1);
+    response |= apply_to_4input3(0, 0, 1, 0, 1);
+    response |= apply_to_4input3(0, 0, 1, 1, 1);
+    response |= apply_to_4input3(0, 1, 0, 0, 1);
+    response |= apply_to_4input3(0, 1, 0, 1, 1);
+    response |= apply_to_4input3(0, 1, 1, 0, 1);
+    response |= apply_to_4input3(0, 1, 1, 1, 1);
+    response |= apply_to_4input3(1, 0, 0, 0, 1);
+    response |= apply_to_4input3(1, 0, 0, 1, 1);
+    response |= apply_to_4input3(1, 0, 1, 0, 1);
+    response |= apply_to_4input3(1, 0, 1, 1, 1);
+    response |= apply_to_4input3(1, 1, 0, 0, 1);
+    response |= apply_to_4input3(1, 1, 0, 1, 1);
+    response |= apply_to_4input3(1, 1, 1, 0, 1);
+    response |= apply_to_4input3(1, 1, 1, 1, 0);
   } else if ( strcmp(selected_ic, "EO2") == 0 ) {
     Serial.println("XOR");
     response |= apply_to_2input1(0, 0, 0);
@@ -199,6 +249,41 @@ void exec_test() {
     response |= apply_to_4input2(1, 1, 0, 1, 1, 0); // J=0 K=1 Q=1->0
     response |= apply_to_4input2(0, 1, 0, 1, 0, 1); // negative edge triger Q=1->0
     response |= apply_to_4input2(1, 0, 0, 0, 0, 1); // reset
+  } else if ( strcmp(selected_ic, "BC4") == 0 ) {
+    Serial.println("BC4");   // ck re  a  b  c  d
+    response |= apply_to_2input3(1, 1, 0, 0, 0, 0); // reset
+    response |= apply_to_2input3(1, 0, 0, 0, 0, 0); // initial state
+    response |= apply_to_2input3(0, 0, 0, 0, 0, 1); // 1
+    response |= apply_to_2input3(1, 0, 0, 0, 0, 1); // 
+    response |= apply_to_2input3(0, 0, 0, 0, 1, 0); // 2
+    response |= apply_to_2input3(1, 0, 0, 0, 1, 0); // 
+    response |= apply_to_2input3(0, 0, 0, 0, 1, 1); // 3
+    response |= apply_to_2input3(1, 0, 0, 0, 1, 1); // 
+    response |= apply_to_2input3(0, 0, 0, 1, 0, 0); // 4
+    response |= apply_to_2input3(1, 0, 0, 1, 0, 0); // 
+    response |= apply_to_2input3(0, 0, 0, 1, 0, 1); // 5
+    response |= apply_to_2input3(1, 0, 0, 1, 0, 1); // 
+    response |= apply_to_2input3(0, 0, 0, 1, 1, 0); // 6
+    response |= apply_to_2input3(1, 0, 0, 1, 1, 0); // 
+    response |= apply_to_2input3(0, 0, 0, 1, 1, 1); // 7
+    response |= apply_to_2input3(1, 0, 0, 1, 1, 1); // 
+    response |= apply_to_2input3(0, 0, 1, 0, 0, 0); // 8
+    response |= apply_to_2input3(1, 0, 1, 0, 0, 0); // 
+    response |= apply_to_2input3(0, 0, 1, 0, 0, 1); // 9
+    response |= apply_to_2input3(1, 0, 1, 0, 0, 1); // 
+    response |= apply_to_2input3(0, 0, 1, 0, 1, 0); // 10
+    response |= apply_to_2input3(1, 0, 1, 0, 1, 0); // 
+    response |= apply_to_2input3(0, 0, 1, 0, 1, 1); // 11
+    response |= apply_to_2input3(1, 0, 1, 0, 1, 1); // 
+    response |= apply_to_2input3(0, 0, 1, 1, 0, 0); // 12
+    response |= apply_to_2input3(1, 0, 1, 1, 0, 0); // 
+    response |= apply_to_2input3(0, 0, 1, 1, 0, 1); // 13
+    response |= apply_to_2input3(1, 0, 1, 1, 0, 1); // 
+    response |= apply_to_2input3(0, 0, 1, 1, 1, 0); // 14
+    response |= apply_to_2input3(1, 0, 1, 1, 1, 0); // 
+    response |= apply_to_2input3(0, 0, 1, 1, 1, 1); // 15
+    response |= apply_to_2input3(1, 0, 1, 1, 1, 1); // 
+    response |= apply_to_2input3(1, 1, 0, 0, 0, 0); // reset
   } else {
     response = 0xffff;
   }
@@ -226,6 +311,15 @@ unsigned int apply_to_3input1( byte test_a, byte test_b, byte test_c, byte expec
   unsigned int e = (expect << 14) | (expect << 10) | (expect << 5); // 12pin 8pin 6pin (74LS10)
   return apply_test( (~ND3_IO_DIR & (a | b | c)), e, ND3_IO_DIR );
 }
+// ND4
+unsigned int apply_to_4input3( byte test_a, byte test_b, byte test_c, byte test_d, byte expect ) {
+  unsigned int a = (test_a << 15) | (test_a <<  0); // 13pin 1pin (74LS20)
+  unsigned int b = (test_b << 14) | (test_b <<  1); // 12pin 2pin (74LS20)
+  unsigned int c = (test_c << 12) | (test_c <<  3); // 10pin 4pin (74LS20)
+  unsigned int d = (test_d << 11) | (test_d <<  4); //  9pin 5pin (74LS20)
+  unsigned int e = (expect << 10) | (expect <<  5); //  8pin 6pin (74LS20)
+  return apply_test( (~ND4_IO_DIR & (a | b | c | d)), e, ND4_IO_DIR );
+}
 // NR2
 unsigned int apply_to_2input2( byte test_a, byte test_b, byte expect ) {
   unsigned int a = (test_a << 13) | (test_a << 10) | (test_a << 5) | (test_a << 2); // 11pin  8pin 6pin 3pin (74LS02)
@@ -233,7 +327,7 @@ unsigned int apply_to_2input2( byte test_a, byte test_b, byte expect ) {
   unsigned int e = (expect << 15) | (expect << 12) | (expect << 3) | (expect << 0); // 13pin 10pin 4pin 1pin (74LS02)
   return apply_test( (~NR2_IO_DIR & (a | b)), e, NR2_IO_DIR );
 }
-// IV1
+// IV1, BUF
 unsigned int apply_to_1input1( byte test_a, byte expect ) {
   unsigned int a = (test_a << 15) | (test_a << 13) | (test_a << 11) | (test_a << 4) | (test_a << 2) | (test_a << 0); // 13pin 11pin 9pin 5pin 3pin 1pin (74LS04)
   unsigned int e = (expect << 14) | (expect << 12) | (expect << 10) | (expect << 5) | (expect << 3) | (expect << 1); // 12pin 10pin 8pin 6pin 4pin 2pin (74LS04)
@@ -254,10 +348,20 @@ unsigned int apply_to_4input2( byte test_clk, byte test_clr, byte test_j, byte t
   unsigned int a = (test_clk << 14) | (test_clk << 11); // 12pin  9pin (74LS107)
   unsigned int b = (test_clr << 15) | (test_clr << 12); // 13pin 10pin (74LS107)
   unsigned int c = (test_j   << 10) | (test_j   <<  0); //  8pin  1pin (74LS107)
-  unsigned int d = (test_k   << 13) | (test_k   <<  3); // 11pin 4pin (74LS107)
-  unsigned int e = (exp_q    <<  4) | (exp_q    <<  2); //  5pin 3pin (74LS107)
-  unsigned int f = (exp_qn   <<  5) | (exp_qn   <<  1); //  6pin 2pin (74LS107)
+  unsigned int d = (test_k   << 13) | (test_k   <<  3); // 11pin  4pin (74LS107)
+  unsigned int e = (exp_q    <<  4) | (exp_q    <<  2); //  5pin  3pin (74LS107)
+  unsigned int f = (exp_qn   <<  5) | (exp_qn   <<  1); //  6pin  2pin (74LS107)
   return apply_test( (~JKF_IO_DIR & (a | b | c | d)), (e | f), JKF_IO_DIR );
+}
+// BC4 (74LS393)
+unsigned int apply_to_2input3( byte test_clk, byte test_clr, byte exp_d, byte exp_c, byte exp_b, byte exp_a ) {
+  unsigned int a = (test_clk << 15) | (test_clk <<  0); // 13pin  1pin (74LS393)
+  unsigned int b = (test_clr << 14) | (test_clr <<  1); // 12pin  2pin (74LS393)
+  unsigned int c = (exp_a    << 13) | (exp_a    <<  2); // 11pin  3pin (74LS393)
+  unsigned int d = (exp_b    << 12) | (exp_b    <<  3); // 10pin  4pin (74LS393)
+  unsigned int e = (exp_c    << 11) | (exp_c    <<  4); //  9pin  5pin (74LS393)
+  unsigned int f = (exp_d    << 10) | (exp_d    <<  5); //  8pin  6pin (74LS393)
+  return apply_test( (~BC4_IO_DIR & (a | b)), (c | d | e | f), BC4_IO_DIR );
 }
 unsigned int apply_test( unsigned test, unsigned e, unsigned io_dir ) {
   write_I2C_port(0x00, byte(io_dir >> 8)); // I/O Direction A 0:output 1:input
