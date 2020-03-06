@@ -15,12 +15,17 @@ Arduinoシールド型（ちょっとでかい）で、0.5秒ぐらいでICを1�
 
 ## 対応IC
 *  "IV1 (74LS04)", // 1-input NOT
+*  "BUF (74LS07)", // 1-input Buffer
 *  "AN2 (74LS08)", // 2-input AND
 *  "OR2 (74LS32)", // 2-input OR
 *  "ND2 (74LS00)", // 2-input NAND
+*  "ND3 (74LS10)", // 3-input NAND
+*  "ND4 (74LS20)", // 4-input NAND
 *  "NR2 (74LS02)", // 2-input NOR
 *  "EO2 (74LS86)", // 2-input XOR
-*  "DFF (74LS74)"  // D flip-flop
+*  "DFF (74LS74)", // D flip-flop
+*  "JKF(74LS107)", // JK flip-flop
+*  "BC4(74LS393)"  // Dual 4-Bit Binary Counter
 
 ## つかいかた
 1. Arduinoにシールドを指します
@@ -29,11 +34,9 @@ Arduinoシールド型（ちょっとでかい）で、0.5秒ぐらいでICを1�
 4. testボタンを押して、OKが出れば正常、NGが出れば壊れています
 
 ## Arduinoへのスケッチの書き込み
-`tester_74xx_i2c.ino`をArduino IDE (1.6.11で確認)で書き込んでください
+`tester_74xx_i2c.ino`をArduino IDE (1.8.10で確認)で書き込んでください
 
 ![加工した基板の例](/img/kiban.jpg)  
 
 FusionPCBで製造（ちょっとTestとSelectのシルク間違えた）
 
-## ToDo
-7490, 7447, 7420をチェックする
